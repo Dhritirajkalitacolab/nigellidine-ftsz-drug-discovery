@@ -1,9 +1,9 @@
 # Nigellidine-FtsZ Structure-Based Drug Discovery
 
 **Status:** In progress  
-**Workflow:** ADMET and toxicity screening -> molecular docking and validation -> mammalian-tubulin selectivity counter-screen -> molecular dynamics -> energetic and experimental validation
+**Workflow:** ADMET and toxicity screening -> molecular docking and validation -> mammalian-tubulin selectivity counter-screen -> molecular dynamics -> MM-GBSA binding-energy estimate -> experimental validation (pending)
 
-A computational investigation of *Nigella sativa* alkaloids against *Staphylococcus aureus* FtsZ. The project follows the staged workflow recorded for the project: compounds are first screened for predicted drug-likeness and toxicity, then evaluated by validated docking, counter-screened against mammalian tubulin, and finally examined by a corrected 100 ns molecular-dynamics simulation.
+A computational investigation of three *Nigella sativa* alkaloids against *Staphylococcus aureus* FtsZ: the indazole alkaloids nigellidine and nigellicine, which are rare in nature and little investigated, and the isoquinoline alkaloid nigellimine. Compounds are first screened for predicted drug-likeness and toxicity, then evaluated by validated docking, counter-screened against mammalian tubulin, examined by a corrected 100 ns molecular-dynamics simulation, and assessed with an MM-GBSA binding-energy estimate.
 
 > **Lead candidate:** Nigellidine  
 > **Reserve candidates:** Nigellicine and Nigellimine  
@@ -34,7 +34,9 @@ Corrected 100 ns molecular dynamics
         |
 Structural and interaction analyses
         |
-MM-GBSA/MM-PBSA and experimental validation
+MM-GBSA binding-energy estimate
+        |
+Experimental validation (pending)
 ```
 
 ---
@@ -49,7 +51,7 @@ MM-GBSA/MM-PBSA and experimental validation
 
 All three compounds were recorded as passing the Lipinski, Ghose, Veber, Egan, and Muegge filters with zero evaluated rule violations and high predicted gastrointestinal absorption.
 
-Nigellimine remains a reserve because of its predicted Class 3 toxicity and mutagenicity signal. Borderline carcinogenicity predictions for Nigellidine and Nigellicine are screening alerts, not confirmed biological outcomes.
+Nigellimine remains a reserve because of its predicted Class 3 toxicity and mutagenicity signal. Borderline carcinogenicity predictions for Nigellidine and Nigellicine are screening alerts, not confirmed biological outcomes. SwissADME also predicts Nigellidine to inhibit CYP1A2 and CYP2D6.
 
 > ADMET and toxicity-server outputs are model predictions. Experimental pharmacokinetic, cytotoxicity, genotoxicity, and toxicological testing remain necessary.
 
@@ -71,7 +73,7 @@ Lead ligand: Nigellidine
 | Method | Result | Interpretation |
 |---|---:|---|
 | AutoDock Vina | -8.37 kcal/mol | Favorable predicted score |
-| AutoDock4 | -7.25 kcal/mol | Lead ranking reproduced within this workflow |
+| AutoDock4 | -7.25 kcal/mol (8 of 10 runs) | Favorable predicted score |
 | GNINA | -8.25 to -8.63 kcal/mol | CNN-assisted scoring supported favorable predicted binding |
 | DiffDock-L | Consistent predicted pose | Independent pose prediction supported the consensus region |
 
@@ -105,33 +107,9 @@ A later reconstructed GDP run is not treated as an exact reproduction of the ori
 
 ## 3. Mammalian-Tubulin Selectivity Counter-Screen
 
-Two workflows are reported separately because they used different structures, preparations, and validated methods.
+The counter-screen uses PDB 4I55, which contains bovine tubulin. It is used as a mammalian-tubulin model and is not described as a human structure.
 
-### 3.1 1JFF workflow
-
-| Method | Native-ligand redocking RMSD | Status |
-|---|---:|---|
-| AutoDock Vina | 2.68 A | Failed the predefined <2.0 A criterion |
-| GNINA | 0.991 A | Passed |
-
-Vina was excluded from the final 1JFF affinity comparison. GNINA was retained.
-
-#### GNINA result under reconciliation
-
-```text
-Workflow record:      tubulin = -5.48 kcal/mol
-Presentation Slide 2: tubulin = -6.33 kcal/mol
-```
-
-The presentation pairs -6.33 kcal/mol with FtsZ -8.63 kcal/mol, giving a 2.30 kcal/mol gap. The workflow record pairs -5.48 kcal/mol with FtsZ -8.25 to -8.63 kcal/mol, giving a 2.77 to 3.15 kcal/mol gap.
-
-The original GNINA output files must be matched to their run provenance before either tubulin score is designated authoritative. Both records favor FtsZ, but no single exact GNINA selectivity gap is final yet.
-
-### 3.2 4I55 workflow
-
-PDB 4I55 contains bovine tubulin and is used as a mammalian-tubulin model, not described as a human structure.
-
-#### Targeted AutoDock Vina
+### Targeted AutoDock Vina
 
 | Target | Nigellidine Mode 1 score |
 |---|---:|
@@ -141,7 +119,7 @@ PDB 4I55 contains bovine tubulin and is used as a mammalian-tubulin model, not d
 
 The 1.1 kcal/mol difference is close to typical docking-score uncertainty and is therefore insufficient by itself to establish selectivity.
 
-#### 4I55 validation status
+### 4I55 validation status
 
 ```text
 Documented GDP-redocking RMSD: 0.235 A
@@ -150,6 +128,10 @@ Recorded status: PASS
 ```
 
 The 0.235 A value remains labelled **documented** until independently recalculated from the deposited crystal and redocked GDP coordinates.
+
+### Why AutoDock4 is not used for tubulin
+
+AutoDock4's genetic-algorithm search failed to reproduce the crystal GDP pose in 4I55, even with a doubled search budget. A single-point (EPDB) evaluation of the crystal pose scored -7.69 kcal/mol, better than any pose the search found. The failure was therefore in the search, not the scoring function, and AutoDock4 was excluded from the tubulin comparison on that evidence. Its FtsZ result (Section 2) is unaffected.
 
 ---
 
@@ -230,15 +212,39 @@ The ligand-to-pocket distance supports retention near the selected pocket during
 
 Contact occupancy used a 0.4 nm cutoff. Simulation-contact residues should not automatically be interpreted as crystallographic GDP-contact residues. Residue identities, especially residue 105, require verification against the final topology.
 
-The low hydrogen-bond count shows that persistent hydrogen bonding was uncommon. MM-GBSA/MM-PBSA or another energy-decomposition method is required before assigning energetic dominance to hydrophobic or van der Waals forces.
+The low hydrogen-bond count shows that persistent hydrogen bonding was uncommon. The MM-GBSA decomposition below independently indicates that van der Waals interactions dominate the favorable terms.
 
-> The observed transitions are supported by one 100 ns trajectory. Independent replicates are required.
+### MM-GBSA binding-energy estimate
+
+```text
+Tool:        gmx_MMPBSA 1.6.5
+Model:       Generalized Born, igb = 5
+Conditions:  300 K, 0.15 M salt
+Frames:      1001 (every 10th frame of the corrected 100 ns trajectory)
+Entropy:     not included
+```
+
+| Term | Value (kcal/mol) |
+|---|---:|
+| van der Waals (ΔVDWAALS) | -21.96 |
+| Electrostatic (ΔEEL) | -12.71 |
+| Gas-phase total (ΔGGAS) | -34.68 |
+| Polar solvation (ΔEGB) | +24.17 |
+| Nonpolar solvation (ΔESURF) | -2.77 |
+| Solvation total (ΔGSOLV) | +21.40 |
+| **ΔTOTAL** | **-13.28 ± 0.97 (SD); SEM 0.03** |
+
+ΔTOTAL is a binding-energy estimate, not an absolute binding free energy, because the entropy term is not included. The SD is the uncertainty quoted: consecutive MD frames are correlated, so the SEM understates the real uncertainty. The estimate comes from one trajectory and is not yet a converged value.
+
+The large raw bonded-energy terms in the Complex and Receptor tables come from the CHARMM-to-Amber topology conversion and cancel in the Delta (Complex - Receptor - Ligand) values. Only Delta values are interpreted.
+
+> The observed transitions and the MM-GBSA estimate are supported by one 100 ns trajectory. Independent replicates are required.
 
 ---
 
 ## Current Interpretation
 
-The computational evidence supports Nigellidine as the lead among the three screened alkaloids, favorable predicted FtsZ docking, reproducible FtsZ blind poses, overall structural stability during the corrected MD trajectory, and predicted drug-like properties.
+The computational evidence supports Nigellidine as the lead among the three screened alkaloids, favorable predicted FtsZ docking, reproducible FtsZ blind poses, overall structural stability during the corrected MD trajectory, a favorable single-trajectory MM-GBSA estimate dominated by van der Waals interactions, and predicted drug-like properties.
 
 The evidence does not establish experimental FtsZ inhibition, antibacterial activity, mammalian selectivity, clinical efficacy, or therapeutic safety.
 
@@ -246,11 +252,10 @@ The evidence does not establish experimental FtsZ inhibition, antibacterial acti
 
 ## Open Work
 
-- [ ] Reconcile the -5.48 and -6.33 kcal/mol GNINA tubulin records
 - [ ] Recalculate the documented 4I55 GDP-redocking RMSD
 - [ ] Verify MD residue identities, especially residue 105
-- [ ] Run MM-GBSA or MM-PBSA
-- [ ] Run independent MD replicates
+- [x] Run MM-GBSA on the corrected trajectory
+- [ ] Run independent MD replicates, and repeat MM-GBSA on each
 - [ ] Complete statistical replicate comparison
 - [ ] Complete protein-ligand interaction mapping
 - [ ] Perform FtsZ polymerization and GTPase assays
@@ -276,6 +281,7 @@ The evidence does not establish experimental FtsZ inhibition, antibacterial acti
 |   |-- admet/
 |   |-- selectivity/
 |   |-- md/
+|   |-- mmgbsa/
 |   `-- interactions/
 |-- scripts/
 |-- figures/
@@ -313,7 +319,8 @@ Large simulation data may be archived separately through Zenodo, Figshare, the O
 - **ADMET/toxicity:** SwissADME, ProTox-3.0
 - **Docking:** AutoDock Vina, AutoDock4, GNINA, DiffDock-L
 - **Preparation:** AutoDockTools/MGLTools, Open Babel
-- **Molecular dynamics:** GROMACS, CHARMM36, TIP3P
+- **Molecular dynamics:** GROMACS, CHARMM36, CGenFF (ligand), TIP3P
+- **Binding energy:** gmx_MMPBSA 1.6.5
 - **Visualization:** VMD, UCSF ChimeraX
 
 Exact versions should be recorded in `environment/software_versions.txt`.
@@ -333,14 +340,13 @@ ADMET screening:               Complete
 Compound prioritization:       Complete
 FtsZ molecular docking:        Complete
 FtsZ redocking validation:     Complete
-1JFF tubulin counter-screen:   Complete; GNINA score reconciliation pending
 4I55 tubulin counter-screen:   Complete
 Blind-docking comparison:      Complete
 Corrected 100 ns MD:           Complete
 Core MD analysis:              Complete
-MM-GBSA/MM-PBSA:               Pending
+MM-GBSA (single trajectory):   Complete
 MD replicates:                 Pending
-Experimental validation:      Pending
+Experimental validation:       Pending
 Manuscript preparation:        In progress
 ```
 
@@ -348,6 +354,6 @@ Manuscript preparation:        In progress
 
 ## Citation and Use
 
-Repository citation metadata should be provided in `CITATION.cff`. Cite the repository, PDB entries 3VOA, 1JFF, and 4I55, and the original publications for all software, force fields, databases, and web predictors used.
+Repository citation metadata should be provided in `CITATION.cff`. Cite the repository, PDB entries 3VOA and 4I55, and the original publications for all software, force fields, databases, and web predictors used.
 
 **Research and academic use only.** Repository publication, redistribution, and reuse remain subject to institutional requirements, software and database licences, and project-supervisor requirements.
